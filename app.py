@@ -7,12 +7,58 @@ API_KEY = os.environ.get('API_KEY')
 KG_ID = os.environ.get('KG_ID')
 RESOURCES_ENDPOINT = BASE_URL + '/api/v1/ecosystem/resources'
 ORCHESTRA_ENDPOINT = BASE_URL + '/api/v1/knowledgeGraphs/' + KG_ID + '/orchestra/workflows'
+SCHEMA_ENDPOINT = BASE_URL + '/api/v1/knowledgeGraphs/' + KG_ID + '/schema'
+CLASSES_ENDPOINT = SCHEMA_ENDPOINT + '/classes'
+RELATIONSHIPS_ENDPOINT = SCHEMA_ENDPOINT + '/relationships'
 NEO4J_RESOURCE_TYPE = '#Hume.Orchestra.Resource.Neo4j'
 
 def headers():
     headers = {'x-api-key': API_KEY}
     
     return headers
+
+def delete_class(uuid):
+    url = CLASSES_ENDPOINT + '/' + uuid
+    requests.delete(url, headers=headers())
+
+def delete_relationship(uuid):
+    url = RELATIONSHIPS_ENDPOINT + '/' + uuid
+    requests.delete(url, headers=headers())
+
+def delete_experiment_classes():
+    url = SCHEMA_ENDPOINT
+    response = requests.get(url, headers=headers()).json()
+    for item in response['classes']:
+        if item['label'].startswith('Experiment_'):
+            delete_class(item['uuid'])
+
+def delete_experiment_relationships():
+    url = SCHEMA_ENDPOINT
+    response = requests.get(url, headers=headers()).json()
+    for item in response['relationships']:
+        if item['label'].startswith('Experiment_'):
+            delete_relationship(item['uuid'])
+
+def create_class(label, experiment_id):
+    url = CLASSES_ENDPOINT
+    body = {'label': 'Experiment_' + experiment_id + '_' + label, 'attributes': [{'label': 'name', 'type': 'STRING'}]}
+    response = requests.post(url, headers=headers(), json=body).json()
+
+    return response
+
+def create_relationship(label, experiment_id, startLabel, endLabel):
+    url = RELATIONSHIPS_ENDPOINT
+    body = {'label': 'Experiment_' + experiment_id + '_' + label, 'startUuid': startLabel, 'endUuid': endLabel}
+    response = requests.post(url, headers=headers(), json=body).json()
+
+    return response
+
+def create_experiment_schema(experiment_id):
+    delete_experiment_classes()
+    person = create_class('Person', experiment_id)
+    movie = create_class('Movie', experiment_id)
+    rel = create_relationship('ACTED_IN', experiment_id, person['uuid'], movie['uuid'])
+
 
 def extract_resource(data, name):
     for item in data:
@@ -76,6 +122,7 @@ def build_and_start_workflow(label):
     start_workflow(wf['uuid'])
 
 if __name__ == '__main__':
-    labels = ['Person', 'Movie']
-    for x in labels:
-        build_and_start_workflow(x)
+    # labels = ['Person', 'Movie']
+    # for x in labels:
+    #     build_and_start_workflow(x)
+    create_experiment_schema('123fff')

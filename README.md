@@ -1,6 +1,6 @@
 # Hume API example with Python
 
-Simple example creating workflows with the Hume Rest API 
+Simple example creating a schema and workflows with the Hume Rest API 
 
 ## Requirements
 
